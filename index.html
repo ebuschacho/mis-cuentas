@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mis ingresos y egresos</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mis cuentas">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Layout: resumen arriba, carga rápida, lista, categorías y respaldo. Pensado primero para el celular. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#18212d; --muted:#5d6979; --line:#dde3ea;
+  --accent:#2e4bd6; --accent-ink:#ffffff; --in:#17855a; --out:#c03c28; --soft:#eef1f6;
+  --display:-apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --body:-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11151b; --surface:#19202a; --ink:#e5e9ef; --muted:#97a2b2; --line:#2a333f;
+    --accent:#7d95ff; --accent-ink:#0f1420; --in:#4cc28a; --out:#ff7c66; --soft:#202834;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:18px;
+  padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;justify-content:space-between}
+h1{font-family:var(--display);font-weight:700;font-size:26px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-family:var(--display);font-weight:650;font-size:18px;margin:0;text-wrap:balance}
+select,input,button{font:inherit;color:inherit}
+/* 16px o más evita que el iPhone haga zoom al tocar un campo */
+select,input{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;font-size:16px;-webkit-appearance:none;appearance:none}
+input[type="date"]{min-height:46px;min-width:0;max-width:100%;display:block}
+.row2 > .field{overflow:hidden}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.period{width:auto;min-width:180px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:2px}
+.tile .lbl{font-size:13px;color:var(--muted)}
+.tile .val{font-family:var(--display);font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile.in .val{color:var(--in)} .tile.out .val{color:var(--out)}
+.tile.bal{border-color:var(--accent)}
+.tile .sub{font-size:12px;color:var(--muted)}
+.main{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px}
+form{display:grid;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:11px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;border-radius:8px;padding:10px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button[data-t="out"][aria-pressed="true"]{color:var(--out)}
+.seg button[data-t="in"][aria-pressed="true"]{color:var(--in)}
+.field{display:grid;gap:5px;min-width:0}
+.field label{font-size:13px;color:var(--muted);font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.amount{font-size:22px!important;font-variant-numeric:tabular-nums;font-weight:600}
+.btn{border:0;border-radius:11px;padding:13px 14px;background:var(--accent);color:var(--accent-ink);font-weight:600;cursor:pointer}
+.btn:active{filter:brightness(.92)}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;font-size:14px;color:var(--ink)}
+.ghost:active{background:var(--soft)}
+.err{color:var(--out);font-size:13px;min-height:1em;margin:0}
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.count{color:var(--muted);font-size:13px;font-weight:400;font-family:var(--body)}
+ul.movs{list-style:none;margin:0;padding:0;display:grid}
+.mov{display:grid;grid-template-columns:48px 1fr auto 36px;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.mov:first-child{border-top:0}
+.mov .date{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.2}
+.mov .date b{display:block;font-size:17px;color:var(--ink);font-weight:600}
+.mov .what{min-width:0}
+.mov .desc{font-weight:500;overflow-wrap:anywhere}
+.chip{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--soft);color:var(--muted);margin-top:2px}
+.mov .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.mov.in .amt{color:var(--in)} .mov.out .amt{color:var(--out)}
+.del{width:36px;height:36px;border-radius:9px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--muted);font-size:20px;line-height:1}
+.del.confirm{width:auto;padding:0 9px;font-size:12px;font-weight:600;color:#fff;background:var(--out);border-color:var(--out)}
+.mov:has(.del.confirm){grid-template-columns:48px 1fr auto auto}
+.empty{color:var(--muted);padding:18px 0;text-align:center}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.cats{display:grid;gap:10px}
+.cat{display:grid;grid-template-columns:120px 1fr 160px;gap:12px;align-items:center;font-size:14px}
+.cat .name{overflow-wrap:anywhere}
+.bar{height:10px;background:var(--soft);border-radius:999px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--out);border-radius:999px;opacity:.85}
+.cat .num{text-align:right;font-variant-numeric:tabular-nums}
+.cat .num small{color:var(--muted);margin-left:6px}
+.backup p{margin:0;color:var(--muted);font-size:14px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.msg{font-size:13px;color:var(--muted);min-height:1em;margin:0}
+@media (max-width:800px){ .main{grid-template-columns:1fr} }
+@media (max-width:520px){
+  h1{font-size:23px}
+  header{align-items:stretch}
+  .period{width:100%}
+  .tiles{grid-template-columns:1fr;gap:8px}
+  .tile{grid-template-columns:1fr auto;align-items:center;padding:12px 14px}
+  .tile .val{font-size:22px;grid-row:1/3;grid-column:2}
+  .cat{grid-template-columns:1fr auto}
+  .cat .bar{grid-column:1/-1;grid-row:2}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mis ingresos y egresos</h1>
+    <label for="periodo" style="position:absolute;left:-9999px">Período</label>
+    <select id="periodo" class="period"></select>
+  </header>
+
+  <div id="banner"></div>
+
+  <section class="tiles" aria-label="Resumen del período">
+    <div class="tile in"><span class="lbl">Ingresos</span><span class="val" id="t-in"></span></div>
+    <div class="tile out"><span class="lbl">Egresos</span><span class="val" id="t-out"></span></div>
+    <div class="tile bal"><span class="lbl">Saldo</span><span class="val" id="t-bal"></span><span class="sub" id="t-sub"></span></div>
+  </section>
+
+  <div class="main">
+    <section class="card" aria-labelledby="f-title">
+      <h2 id="f-title">Nuevo movimiento</h2>
+      <form id="form" novalidate>
+        <div class="seg" role="group" aria-label="Tipo de movimiento">
+          <button type="button" data-t="out" id="seg-out" aria-pressed="true">Egreso</button>
+          <button type="button" data-t="in" id="seg-in" aria-pressed="false">Ingreso</button>
+        </div>
+        <div class="field"><label for="monto">Monto ($)</label><input id="monto" class="amount" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+        <div class="row2">
+          <div class="field"><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+          <div class="field"><label for="cat">Categoría</label><input id="cat" list="cats" autocomplete="off"></div>
+        </div>
+        <datalist id="cats"></datalist>
+        <div class="field"><label for="desc">Detalle (opcional)</label><input id="desc" autocomplete="off" placeholder="Ej.: verdulería"></div>
+        <p class="err" id="err" role="alert"></p>
+        <button class="btn" type="submit" id="add">Agregar egreso</button>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="l-title">
+      <div class="list-head"><h2 id="l-title">Movimientos <span class="count" id="count"></span></h2></div>
+      <ul class="movs" id="list"></ul>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="c-title">
+    <h2 id="c-title">Egresos por categoría</h2>
+    <div class="cats" id="cats-out"></div>
+  </section>
+
+  <section class="card backup" aria-labelledby="b-title">
+    <h2 id="b-title">Respaldo</h2>
+    <p>Tus datos se guardan solo en este teléfono. Hacé un respaldo de vez en cuando y guardalo en Archivos o iCloud Drive.</p>
+    <div class="actions">
+      <button type="button" class="ghost" id="exportar">Guardar respaldo</button>
+      <button type="button" class="ghost" id="importar">Restaurar respaldo</button>
+      <button type="button" class="ghost" id="csv">Copiar mes como CSV</button>
+      <input type="file" id="archivo" accept=".json,application/json" hidden>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var LS = "mis-cuentas-v1";
+  var CATS = {
+    "in": ["Sueldo","Ventas","Freelance","Reintegros","Otros"],
+    "out": ["Alquiler","Supermercado","Servicios","Transporte","Salud","Educación","Ocio","Otros"]
+  };
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var f0 = new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0});
+  var f2 = new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:2,maximumFractionDigits:2});
+  var money = { format: function(n){ n = Math.round(n*100)/100; return (Number.isInteger(n) ? f0 : f2).format(n); } };
+  var $ = function(id){ return document.getElementById(id); };
+
+  var state = { movs: [], ultimoRespaldo: null };
+  var storageOk = true;
+  try {
+    var raw = localStorage.getItem(LS);
+    if (raw) { var p = JSON.parse(raw); if (p && Array.isArray(p.movs)) state = p; }
+  } catch(e) { storageOk = false; }
+
+  // Pide al navegador que no borre los datos por falta de espacio.
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+
+  function guardar(){
+    try { localStorage.setItem(LS, JSON.stringify(state)); storageOk = true; }
+    catch(e) { storageOk = false; }
+  }
+
+  var tipo = "out";
+  var filtro = null;
+  try { filtro = sessionStorage.getItem(LS + "-filtro"); } catch(e) {}
+  if (!filtro) filtro = hoy().slice(0,7);
+
+  function hoy(){
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]; }); }
+  function mesLabel(ym){ var p = ym.split("-"); return MESES[+p[1]-1] + " " + p[0]; }
+  function parseMonto(s){
+    s = String(s).trim().replace(/\$|\s/g,"");
+    if (!s) return NaN;
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g,"").replace(",",".");
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,"");
+    var n = Number(s);
+    return isFinite(n) ? Math.round(n*100)/100 : NaN;
+  }
+  function valido(m){
+    return m && (m.tipo === "in" || m.tipo === "out") && typeof m.monto === "number" && m.monto > 0 &&
+      /^\d{4}-\d{2}-\d{2}$/.test(m.fecha) && m.id;
+  }
+
+  $("fecha").value = hoy();
+
+  function setTipo(t){
+    tipo = t;
+    $("seg-out").setAttribute("aria-pressed", t === "out");
+    $("seg-in").setAttribute("aria-pressed", t === "in");
+    $("add").textContent = t === "out" ? "Agregar egreso" : "Agregar ingreso";
+    var all = CATS[t].slice();
+    state.movs.forEach(function(m){ if (m.tipo === t && m.cat && all.indexOf(m.cat) < 0) all.push(m.cat); });
+    $("cats").innerHTML = all.map(function(c){ return '<option value="' + esc(c) + '"></option>'; }).join("");
+    if (CATS[t === "in" ? "out" : "in"].indexOf($("cat").value) >= 0) $("cat").value = "";
+    $("cat").placeholder = t === "out" ? "Ej.: Supermercado" : "Ej.: Sueldo";
+  }
+  $("seg-out").onclick = function(){ setTipo("out"); };
+  $("seg-in").onclick = function(){ setTipo("in"); };
+
+  function enPeriodo(m){ return filtro === "todo" || m.fecha.slice(0,7) === filtro; }
+
+  function render(){
+    var meses = {}; meses[hoy().slice(0,7)] = 1;
+    state.movs.forEach(function(m){ meses[m.fecha.slice(0,7)] = 1; });
+    if (filtro !== "todo") meses[filtro] = 1;
+    var keys = Object.keys(meses).sort().reverse();
+    $("periodo").innerHTML = keys.map(function(k){ return '<option value="' + k + '"' + (k === filtro ? " selected" : "") + '>' + mesLabel(k) + '</option>'; }).join("") +
+      '<option value="todo"' + (filtro === "todo" ? " selected" : "") + '>Todo el historial</option>';
+
+    var movs = state.movs.filter(enPeriodo).sort(function(a,b){
+      if (a.fecha !== b.fecha) return a.fecha < b.fecha ? 1 : -1;
+      return (b.creado||0) - (a.creado||0);
+    });
+    var tin = 0, tout = 0;
+    movs.forEach(function(m){ if (m.tipo === "in") tin += m.monto; else tout += m.monto; });
+    var bal = tin - tout;
+    $("t-in").textContent = money.format(tin);
+    $("t-out").textContent = money.format(tout);
+    $("t-bal").textContent = money.format(bal);
+    $("t-bal").style.color = bal < 0 ? "var(--out)" : "var(--ink)";
+    $("t-sub").textContent = tin > 0 ? (tout <= tin ? "Gastaste el " + Math.round(tout/tin*100) + "% de lo que entró" : "Gastaste más de lo que entró") : (filtro === "todo" ? "Todo el historial" : mesLabel(filtro));
+
+    $("count").textContent = movs.length ? "· " + movs.length : "";
+    $("list").innerHTML = movs.length ? movs.map(function(m){
+      var p = m.fecha.split("-");
+      return '<li class="mov ' + m.tipo + '">' +
+        '<div class="date"><b>' + p[2] + '</b>' + MESES[+p[1]-1].slice(0,3) + '</div>' +
+        '<div class="what"><div class="desc">' + esc(m.desc || m.cat || (m.tipo === "in" ? "Ingreso" : "Egreso")) + '</div>' +
+          '<span class="chip">' + esc(m.cat || "Sin categoría") + '</span></div>' +
+        '<div class="amt">' + (m.tipo === "in" ? "+ " : "− ") + money.format(m.monto) + '</div>' +
+        '<button type="button" class="del" data-id="' + esc(m.id) + '" aria-label="Borrar movimiento">×</button>' +
+      '</li>';
+    }).join("") : '<li class="empty">No hay movimientos en ' + (filtro === "todo" ? "el historial" : mesLabel(filtro)) + '. Cargá el primero con el formulario.</li>';
+
+    var porCat = {};
+    movs.forEach(function(m){ if (m.tipo === "out") { var c = m.cat || "Sin categoría"; porCat[c] = (porCat[c]||0) + m.monto; } });
+    var cats = Object.keys(porCat).sort(function(a,b){ return porCat[b] - porCat[a]; });
+    var max = cats.length ? porCat[cats[0]] : 0;
+    $("cats-out").innerHTML = cats.length ? cats.map(function(c){
+      return '<div class="cat"><span class="name">' + esc(c) + '</span>' +
+        '<div class="bar"><span style="width:' + Math.max(2, porCat[c]/max*100).toFixed(1) + '%"></span></div>' +
+        '<span class="num">' + money.format(porCat[c]) + '<small>' + Math.round(porCat[c]/tout*100) + '%</small></span></div>';
+    }).join("") : '<p class="empty" style="margin:0">Sin egresos en este período.</p>';
+
+    // Avisos
+    var avisos = [];
+    if (!storageOk) avisos.push("Este navegador no está guardando los datos. Abrí la app desde el ícono de la pantalla de inicio, no en modo privado.");
+    var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) avisos.push("Para instalarla: tocá Compartir y después «Agregar a pantalla de inicio». Usala siempre desde ese ícono: Safari y el ícono guardan datos por separado.");
+    if (state.movs.length >= 5) {
+      var dias = state.ultimoRespaldo ? (Date.now() - state.ultimoRespaldo) / 864e5 : Infinity;
+      if (dias > 30) avisos.push(state.ultimoRespaldo ? "Pasó más de un mes desde tu último respaldo." : "Todavía no hiciste ningún respaldo de tus datos.");
+    }
+    $("banner").innerHTML = avisos.map(function(a){ return '<div class="banner"><span>' + esc(a) + '</span></div>'; }).join("");
+  }
+
+  $("periodo").onchange = function(){
+    filtro = this.value;
+    try { sessionStorage.setItem(LS + "-filtro", filtro); } catch(e) {}
+    render();
+  };
+
+  $("form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var monto = parseMonto($("monto").value);
+    var fecha = $("fecha").value;
+    if (!(monto > 0)) { $("err").textContent = "Escribí un monto mayor a cero, por ejemplo 15000 o 1.250,50."; $("monto").focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { $("err").textContent = "Elegí una fecha."; $("fecha").focus(); return; }
+    $("err").textContent = "";
+    state.movs.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      tipo: tipo, monto: monto, fecha: fecha,
+      cat: $("cat").value.trim() || "Otros",
+      desc: $("desc").value.trim(), creado: Date.now()
+    });
+    guardar();
+    if (filtro !== "todo" && fecha.slice(0,7) !== filtro) { filtro = fecha.slice(0,7); try { sessionStorage.setItem(LS + "-filtro", filtro); } catch(e) {} }
+    $("monto").value = ""; $("desc").value = "";
+    setTipo(tipo);
+    render();
+    $("monto").blur();
+  });
+
+  var armado = null;
+  $("list").addEventListener("click", function(e){
+    var b = e.target.closest(".del");
+    if (!b) return;
+    var id = b.getAttribute("data-id");
+    if (armado === id) {
+      state.movs = state.movs.filter(function(m){ return m.id !== id; });
+      armado = null; guardar(); render(); return;
+    }
+    render();
+    armado = id;
+    var btns = $("list").querySelectorAll(".del");
+    for (var i = 0; i < btns.length; i++) if (btns[i].getAttribute("data-id") === id) { btns[i].classList.add("confirm"); btns[i].textContent = "¿Borrar?"; }
+    setTimeout(function(){ if (armado === id) { armado = null; render(); } }, 3500);
+  });
+
+  function msg(t){ $("msg").textContent = t; }
+
+  $("exportar").onclick = function(){
+    var nombre = "respaldo-mis-cuentas-" + hoy() + ".json";
+    var datos = JSON.stringify({ app: "mis-cuentas", version: 1, exportado: new Date().toISOString(), movs: state.movs }, null, 1);
+    var blob = new Blob([datos], { type: "application/json" });
+    var marcar = function(){ state.ultimoRespaldo = Date.now(); guardar(); render(); msg("Respaldo listo: " + nombre); };
+    var file = null;
+    try { file = new File([blob], nombre, { type: "application/json" }); } catch(e) {}
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: "Respaldo de mis cuentas" }).then(marcar, function(err){
+        if (err && err.name === "AbortError") msg("Respaldo cancelado.");
+        else descargar();
+      });
+    } else descargar();
+    function descargar(){
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+      marcar();
+    }
+  };
+
+  $("importar").onclick = function(){ $("archivo").value = ""; $("archivo").click(); };
+  $("archivo").onchange = function(){
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try {
+        var d = JSON.parse(r.result);
+        var lista = Array.isArray(d) ? d : d.movs;
+        if (!Array.isArray(lista)) throw new Error("formato");
+        var ids = {}; state.movs.forEach(function(m){ ids[m.id] = 1; });
+        var nuevos = lista.filter(function(m){ return valido(m) && !ids[m.id]; });
+        state.movs = state.movs.concat(nuevos);
+        guardar(); setTipo(tipo); render();
+        msg(nuevos.length ? "Se recuperaron " + nuevos.length + " movimientos." : "Ese respaldo no tenía movimientos nuevos.");
+      } catch(e) { msg("No pude leer ese archivo. Elegí un respaldo guardado desde esta app (.json)."); }
+    };
+    r.onerror = function(){ msg("No pude abrir el archivo."); };
+    r.readAsText(f);
+  };
+
+  $("csv").onclick = function(){
+    var rows = [["fecha","tipo","categoria","detalle","monto"]];
+    state.movs.filter(enPeriodo).sort(function(a,b){ return a.fecha < b.fecha ? -1 : 1; }).forEach(function(m){
+      rows.push([m.fecha, m.tipo === "in" ? "ingreso" : "egreso", m.cat, m.desc, (m.tipo === "in" ? m.monto : -m.monto).toFixed(2)]);
+    });
+    var csv = rows.map(function(r){ return r.map(function(v){ v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }).join(","); }).join("\n");
+    try {
+      navigator.clipboard.writeText(csv).then(function(){ msg("CSV copiado. Pegalo en Numbers, Excel o Google Sheets."); }, function(){ msg("No se pudo copiar."); });
+    } catch(e) { msg("No se pudo copiar."); }
+  };
+
+  setTipo("out");
+  render();
+
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
